@@ -15,15 +15,120 @@ knitr::opts_chunk$set(echo = TRUE)
 - Plus a 30 minute break
 - 26 people
 
-## Bigger picture
+- Gitter live chat
+- RStudio Pro instances (30?)
+- Shortlink for materials
 
-- Discuss the modeling principles guide
+- Slides made in keynote
 
-- Why does this package exist?
-  - Discuss common pitfalls
-  - Case studies of common issues
-    - Particularly painful packages
-  - Case studies of good implementations?
+## General structure
+
+- Introduction to modeling principles
+- Go over hardhat, with hands on sections
+- Build a modeling R package that implements these "best practices"
+  - A mix of slides and hands on work to actually get a working R package
+  - usethis will come in handy
+
+## Outline
+
+### Introduction deck
+
+Needs RStudio logo
+
+- Title slide
+- Shortlink to materials
+- Introduce self + Kelly
+- Outline the 3 hours + break (just the time)
+- Outline what we hope to accomplish in the 3 hours
+- Shortlink again
+- Gitter
+- Explain that everything is available
+- 5 minutes to meet each other
+
+### Deck 1 - The big picture
+
+- Title slide
+
+- The R modeling ecosystem
+  - The wild west
+  - Lack of standards
+    - 2003 BDR - https://developer.r-project.org/model-fitting-functions.html
+    
+- What makes the R modeling ecosystem painful?
+  - Show the `predict()` table with all of the different packages / ways to get class probs
+  - Predictions with a different number of rows as the input
+  - "glmnet doesn't work for me, I work for glmnet"
+  - TODO more?
+  
+- What makes a good modeling R package?
+  - Familiar interfaces
+  - Good defaults
+  - TODO more?
+  
+- Details laid out in modeling principles guide
+  - Link to the guide
+ 
+- If these principles are good, why isn't everyone doing it?
+  - Consider the typical R modeling developer
+    - Statistical researcher
+    - Not a software engineer
+    - Might have an A+ rock solid implementation
+    - But UI is $hit
+  - Key point: A lack of knowledge and tooling to make good UI
+  - Can we:
+    - Provide the tooling
+    - Lower the amount of knowledge required
+  
+- hardhat - A toolkit for the construction of modeling packages
+  - Provide opionated rules around creating modeling packages
+  - Do the "hard work" around preprocessing user input
+    - This otherwise requires special knowledge on the developer's part
+      - `model.matrix()`? recipe? formula method? Just make it work...
+  - Add structure and consistency around the `predict()` method
+  - Provide additional tooling for input validation, with expressive error messages
+  
+- Who wins? Everyone.
+  - Developers can focus on their implementations
+  - Users can reap the benefits of a good UI
+
+### Deck 2 - hardhat
+
+- What are the steps in building a modeling package?
+  - A low level model fitting function
+  - A high level model fitting user interface
+  - A model object that you return to the user
+  - A `predict()` function
+  - Various methods you might implement `coef()`, `summary()`...
+  - hardhat has something to offer for all of these
+
+- Model constructors
+  - What is a constructor?
+    - Advanced R section on constructors
+  - Why are they useful (aka why do I care)?
+  - What does my model object need?
+    - Consider the generics you want methods for
+      - `coef()`?
+      - `residuals()`?
+      - Your own custom ones?
+    - Retain the minimally sufficient set
+  - Do _not_ store the call.
+    - Example with `x <- do.call(lm, list(formula = mpg ~ cyl, data = mtcars))`
+    - This isn't a new idea!
+      - https://github.com/topepo/caret/issues/76#issuecomment-63856383
+    - `call-hell.R`
+  - Try not to store the `terms` object or the model frame
+    - `lm-hell.R`
+
+- Modeling interfaces and preprocessing
+  - What do i mean by interfaces?
+    - formula, data frame, matrix, recipes, ...
+
+### Deck 3 - Building a modeling package
+
+- Your new best friends
+  - usethis
+  - devtools
+  - hardhat
 
 ## hardhat specific ideas
 
@@ -55,8 +160,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Implementing a package that uses hardhat
 
 - Model constructors
-  - Why are they useful?
-  - What should they do?
+  - Using `new_model()` to build our constructor
 
 - Bare bones of S3
   - Why is it useful?
