@@ -18,21 +18,12 @@
   - Shortlink for materials
 
   - Slides made in keynote
-
-## General structure
-
-  - Introduction to modeling principles
-  - Go over hardhat, with hands on sections
-  - Build a modeling R package that implements these “best practices”
-      - A mix of slides and hands on work to actually get a working R
-        package
-      - usethis will come in handy
+    
+      - Needs RStudio logo
 
 ## Outline
 
 ### Introduction deck
-
-Needs RStudio logo
 
   - Title slide
   - Shortlink to materials
@@ -61,13 +52,16 @@ Needs RStudio logo
         ways to get class probs
       - Predictions with a different number of rows as the input
       - “glmnet doesn’t work for me, I work for glmnet”
-      - TODO more?
 
   - What makes a good modeling R package?
     
       - Familiar interfaces
       - Good defaults
-      - TODO more?
+      - Standardized / familiar output from `predict()`
+          - xgboost output `?xgboost:::predict.xgb.Booster()`
+          - Multiclass iris example - Vector that you manually have to
+            convert to a 3 column matrix
+          - parsnip - always a tibble with standardized column names
 
   - Details laid out in modeling principles guide
     
@@ -83,7 +77,7 @@ Needs RStudio logo
       - Key point: A lack of knowledge and tooling to make good UI
       - Discuss the issue of the package developer not wanting to
         understand all about how `model.matrix()` works
-      - Can we:
+      - Can we at RStudio help:
           - Provide the tooling
           - Lower the amount of knowledge required
 
@@ -107,10 +101,13 @@ Needs RStudio logo
 ### Deck 2 - hardhat
 
   - What are the steps in building a modeling package?
-      - A low level model fitting function
       - A high level model fitting user interface
+      - A low level model fitting function
+      - A bridge between them
       - A model object that you return to the user
       - A `predict()` function
+      - `type` specific predict implementations
+      - A bridge between them
       - Various methods you might implement `coef()`, `summary()`…
       - hardhat has something to offer for all of these
       - Good place for the pictures in the hardhat vignette\!
@@ -118,8 +115,8 @@ Needs RStudio logo
       - What do I mean by interfaces?
           - Formula, data.frame, matrix, recipes
       - When would I use one over the other?
-          - Formula VS XY? (Pull from rstudio conf workshop, drawbacks
-            of each)
+          - Formula VS XY?
+          - (Pull from rstudio conf workshop, drawbacks of each)
       - How do I implement one?
           - A crash course on S3
           - `<generic>.<method>()`
@@ -127,28 +124,34 @@ Needs RStudio logo
             be the dispatch arg
   - Low level implementation
       - Accepts only the required inputs, in their raw-est form
-      - This is where you as the package developer shines
+      - This is where you as the package developer shine
       - Returns a named list of the objects you want in your model
         object
   - Bridging the gap
       - The high level interface should be agnostic to the low level
         implementation
       - You need something that bridges the gap between them
-      - This kind of function should accept the preprocessed data, and
-        return a model object using a *constructor*.
-      - Along the way it can convert your preprocessed data to a lower
-        level format
-      - And run the implementation function
+      - This kind of function should:
+          - Accept the preprocessed data
+          - Manipulate it into a low level form
+          - Run the model implementation
+          - Return a model object using a *constructor*.
   - Model constructors
       - What is a constructor?
           - Mention advanced R section on constructors
       - Why are they useful (aka why do I care)?
+          - Allow you to formally class your model object
+          - Allow you to perform type validation on your model object
+            inputs
+          - Give you a place to inherit from another model object
       - What does my model object need?
           - Consider the generics you want methods for
               - `coef()`?
-              - `residuals()`?
+              - `fitted()`?
               - Your own custom ones?
-          - Retain the minimally sufficient set
+          - Please retain the “minimally sufficient” set
+          - Prefer being able to recompute something rather than storing
+            it
       - Do *not* store the call.
           - Example with `x <- do.call(lm, list(formula = mpg ~ cyl,
             data = mtcars))`
@@ -160,13 +163,15 @@ Needs RStudio logo
           - `lm-hell.R`
   - High level `predict()`ion
       - `predict()` generic
-      - What should the `type` be?
-      - `new_data`
+      - What should the `type` be for your model?
+          - Regression: `"numeric"`
+          - Classification: `"class"`, `"prob"`
+          - Intervals?
       - Each `type` should have its own implementation
+      - `new_data` rather than `newdata`
       - Return the correct number of rows
-          - Case study of situations where this doesn’t happen
   - Low level predict implementations
-      - Classification
+      - Example: Classification
           - Might have `"class"` or `"prob"` `type`
           - General advice - separation:
               - `predict_<model_fn>_class()`
@@ -174,15 +179,22 @@ Needs RStudio logo
   - Bridging the gap 2
       - Like with fitting, it makes sense to separate the high level
         predict interface from the low level implementation functions
-      - The bridge function takes the processed `new_data` predictors
-        and passes them along to the correct implementation method
-      - It also has the *very* important job of enforcing size stability
-          - Number of rows in the output should be the same as the input
+      - The bridge function:
+          - Takes the processed `new_data` data frame
+          - Turns it into a low level object (matrix)
+          - Switches on `type` to get the prediction function
+          - Calls the prediction function
+          - Enforces size stability of the output
   - So how does hardhat help?
       - It can set all of this up for you with a call to
         `create_modeling_package()`
   - What else can hardhat help with? (the following sections explain)
       - “A tour of hardhat”
+      - 4 sections
+          - Standardization
+          - Preprocessing
+          - Validation
+          - Prediction
   - Consider: Standardization
       - Different interfaces take data in different ways
       - Your implementation function only cares about the raw predictors
@@ -190,18 +202,41 @@ Needs RStudio logo
       - Introducing `mold()`
       - Mold takes data in all of the common interface formats and
         standardizes it
+          - Diagram of coming in as XY/formula coming out as list of
+            predictor / outcome data frame
       - As you will also see, it does much more with regards to
         preprocessing
   - Consider: Preprocessing
       - Preprocessing at prediction time on new test data
           - Needs to use the same preprocessing as training data
-          - Storing the hardhat blueprint for prediction
+      - How does hardhat help you handle this?
+          - A `blueprint` is returned from `mold()`
+          - This holds all of the information about:
+              - Predictors / outcomes
+                  - Column names
+                  - Class
+                  - Factor levels
+                  - How? `prototypes` (i.e. 0-row tibbles in this case)
+              - How to preprocess them
+                  - Formula terms objects (trimmed down)
+                  - Recipes
+      - What do I do with this blueprint?
+          - Mainly useful in `predict()` alongside…
       - Introducing `forge()`
-          - Using the blueprint that `mold()` returns
-          - Handles the standardization of new data to a common format
-          - And preprocesses the new data using the same processing done
-            on the original data
-      - Various preprocessing variations
+          - Handles the standardization of “new data” to a common format
+              - Trims it down to only the required predictors
+              - And preprocesses the new data using the same processing
+                done on the original data
+              - Also does *validation* on the new data, which I will
+                talk about in a moment
+          - The idea is to:
+              - Preprocess training data with `mold()`
+              - Fit the model with that preprocessed training data
+              - Return a model object *with the blueprint attached*
+              - At prediction time, inside `predict()` that blueprint is
+                used with `forge()` to preprocess + validate new data
+      - `mold()` has various preprocessing variations
+          - Beyond just recipes / formula / xy
           - The hardhat `blueprint` object
               - Can tweak defaults
           - Whether or not to automatically include an intercept
@@ -240,6 +275,9 @@ Needs RStudio logo
       - A logistic regression package
       - Under the hood, we will use `glm()` for the implementation
       - and `predict.glm()` for prediction implementation
+  - An overview of logistic regression
+      - Link function
+      - High level purpose
   - Getting started
       - Creating a new modeling package requires some boilerplate
       - `hardhat::create_modeling_package()`
@@ -247,12 +285,13 @@ Needs RStudio logo
   - What did this do?
       - See `?logistic_regression`
       - See the files in `R/`
-  - They should “just work” immediately
       - Run the examples in `?logistic_regression`
       - And `?predict.logistic_regression`
   - What now?
       - We are going to fill in each of the sections of the skeleton,
         utilizing these best practices that we have learned.
+      - Show the hardhat diagrams again to show how we are going to fill
+        things in
   - Stage 1 - Fit implementation
       - Details
           - Using glm.fit(), not glm() because we want to pass x and y
@@ -395,10 +434,13 @@ Needs RStudio logo
 Stage 11 - Pass CRAN check - `usethis::use_license()` - Update interface
 documentation - `predict()` - `logistic_regression()` - What else?
 
-Stage 12 - A note on recipes - Time permitting - Preprocessing with
+Stage 12 - Trying out the full model - Try various `predict()`
+variations where `forge()` comes in handy
+
+Stage 13 - A note on recipes - Time permitting - Preprocessing with
 recipes - Whether or not to use `skip = TRUE`
 
-Stage 13 - Extra methods - Very much time permitting - `coef()` is easy
+Stage 14 - Extra methods - Very much time permitting - `coef()` is easy
 - `fitted()` is easy - `data` argument as opposed to holding onto the
 fitted values - `stats::predict(type = "prob")` to get the fitted values
 - `residuals()` if time - Required items - fitted values from `fitted()`
