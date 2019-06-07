@@ -123,6 +123,8 @@ Needs RStudio logo
       - How do I implement one?
           - A crash course on S3
           - `<generic>.<method>()`
+          - Historical fun fact - hardcoded allowance for `formula` to
+            be the dispatch arg
   - Low level implementation
       - Accepts only the required inputs, in their raw-est form
       - This is where you as the package developer shines
@@ -161,6 +163,8 @@ Needs RStudio logo
       - What should the `type` be?
       - `new_data`
       - Each `type` should have its own implementation
+      - Return the correct number of rows
+          - Case study of situations where this doesn’t happen
   - Low level predict implementations
       - Classification
           - Might have `"class"` or `"prob"` `type`
@@ -239,7 +243,6 @@ Needs RStudio logo
   - Getting started
       - Creating a new modeling package requires some boilerplate
       - `hardhat::create_modeling_package()`
-      - `devtools::document()`
       - `devtools::load_all()`
   - What did this do?
       - See `?logistic_regression`
@@ -250,48 +253,156 @@ Needs RStudio logo
   - What now?
       - We are going to fill in each of the sections of the skeleton,
         utilizing these best practices that we have learned.
-  - Start with the fit implementation
-      - This is where you figure out what your model requires, which
-        feeds into the other functions
-      - This is where you do the “hard work”
-      - Starting here allows you to prototype quickly since you can
-        supply the raw inputs and make the function run.
-      - Our engine is `glm.fit`
-      - What are our inputs
+  - Stage 1 - Fit implementation
+      - Details
+          - Using glm.fit(), not glm() because we want to pass x and y
+          - x must be a matrix
+          - y must be a vector of 0/1 values
+          - glm.fit() assumes the first level of the outcome is failure
+          - hardhat handles the intercept
+          - Return a list of the important components
+          - Disclaimer about not returning important information about
+            rank/pivot and that for our use cases they won’t matter
+      - Practice
+          - Raw inputs as matrix / vector
+          - “But at least it works\!”
+          - Notice no intercept. That isn’t the job of the
+            implementation function
+  - Stage 2 - Fit bridge - 1
+      - Details
+          - Takes the output from a call to `mold()` (`processed`)
+          - Extract out the predictors `as.matrix(processed$predictors)`
+          - Extract out the outcomes `processed$outcomes[[1]]`
+          - Pass them on to the implementation function, which returns
+            the result
+      - Practice
+          - Call `mold()` on our data, and pass it in as `processed`
+          - Slightly better because `mold()` can handle formula method\!
+  - Stage 3 - Fit bridge - 2
+      - Details
+          - What are we missing? Validation. Constructor.
+          - Validation
+              - Predictors
+                  - Numeric columns in the data frame
+              - Outcome
+                  - Factor
+                  - Binary
+                  - Univariate
+      - Practice
+          - Try to pass in some bad inputs
+              - Non factor outcome
+              - Non binary factors (iris)
+  - Stage 4 - Model constructor
+      - Details
+          - The implementation function guides what we need here
+          - `coefficients`
+          - `blueprint`
+          - `hardhat::new_model()`
+              - Some validation: named `...`, unique names, etc
+              - Print method - Hides the blueprint by default
+              - In the future this might do more `vctrs::new_sclr()`
+                  - `[` method
+          - Fit bridge
+              - Return a `new_logistic_regression_model()` from the
+                bridge
+      - Practice
+          - Run the same code as before, but now we have an actual model
+            object
+          - Run `class()` on it
+          - See that the blueprint is inside
+  - Stage 5 - Fit interface
+      - Details
+          - Is there anything to do? What are we missing?
+              - Intercept\!
+          - Show `mold()` documentation and that it uses a default
+            blueprint
+          - Show the `default_formula_blueprint()` docs
+              - Two arguments `intercept` / `indicators`
+              - Documentation about what it does when mold / forge are
+                called
+          - Add a tweaked default blueprint for each method and pass it
+            on to `mold()`
+          - Add a `intercept = TRUE` argument
+          - Document it\!
+      - Practice
+          - Run the same code as before, but see that we now get an
+            intercept in the output
+          - Run `mold()` by itself to see the intercept column
+  - Stage 6 - Predict implementation - 1
+      - Details
+          - Normally this is where you would have to do a lot more work
+          - We are going to cheat a lot
+          - Assume `predictors` is a matrix
+          - Remember the format of logistic regression
+              - You can use the linear regression prediction function
+                `X*beta` to get the “link” function predictions
+              - This is `type = "link"` if you ever use `predict.glm()`
+          - Implement `predict_logistic_regression_link()`
+      - Practice
+          - Run `logistic_regression()` and pass the results into the
+            link function with `test` data.
+          - Compare with `predict(mod_glm, test, type = "link")`
+  - Stage 7 - Predict implementation - 2
+      - Details
+          - From the link function, we get the probabilities
+          - We have to “invert” the link function,
+            `binomial()$linkinv(pred_link)`
+          - This gives us the probability of “success”
+          - It’s good practice to return the probabilities for all
+            levels so we also return failure
+          - We return them both in the order they appear in the model
+              - Failure, then Success
+          - Important\! The blueprint holds valuable information in the
+            `ptypes`
+              - `ptypes$outcomes` is the 0-row tibble that was used at
+                fit time, so it has all the factor levels\!
+          - Pass these on to `spruce_prob()` to return a tidy tibble of
+            probabilities
+      - Practice
+          - Same code as before but call
+            `predict_logistic_regression_prob()`
+  - Stage 8 - Predict bridge
+      - Details
+          - `type` is a character string
+          - `predictors` here is a data frame (comes from `forge()`)
+          - Convert `predictors` to a matrix
+              - This is the place to do that. Bridge converts to low
+                level types
+          - Write small helper function to switch on the type
+              - `get_predict_function()`
+          - `validate_prediction_size()` as a self check
+          - Question: What other types could we have?
+      - Practice
+          - Use `type = "prob"` and pass in the same data as before to
+            the bridge but where `predictors` is `forge()` output
+  - Stage 9 - Predict interface
+      - Details
+          - Update the default `type`
+          - Update the valid predict types
+          - TODO - Do we need to `@importFrom stats predict`?
+      - Practice
+          - Call `predict()` on the `mod_logreg` with `test`
+  - Stage 10 - Predict implementation - 2
+      - Details
+          - Add `predict_logistic_regression_class()`
+          - Failure is the first column in `prob_tbl`
+          - `hardhat::spruce_class()`
+          - Add to the bridge
+              - `get_predict_function()`
+          - Add to the interface
+              - `valid_predict_types()`
 
-## hardhat specific ideas
+Stage 11 - Pass CRAN check - `usethis::use_license()` - Update interface
+documentation - `predict()` - `logistic_regression()` - What else?
 
-  - Preprocessing with recipes
-      - Whether or not to use `skip = TRUE`
+Stage 12 - A note on recipes - Time permitting - Preprocessing with
+recipes - Whether or not to use `skip = TRUE`
 
-## Implementing a package that uses hardhat
-
-  - Model constructors
-      - Using `new_model()` to build our constructor
-  - User facing function with interfaces for:
-      - data frame
-      - matrix
-      - formula
-          - Historical fun fact - hardcoded allowance for `formula` to
-            be the dispatch arg
-      - recipe
-  - Separation of the interface from the implementation
-      - `linear_regression()` vs `linear_regression_impl()`
-  - Modeling bridge function
-      - Receives processed `mold()` data
-      - Calls the implementation function
-      - Returns a new instance of our model class
-  - Prediction
-      - Always returns the same class of output (tibble)
-      - Standardize on `type`
-      - Standardized column names
-      - Always return the same number of rows as the input (NA value
-        issues)
-          - Case study of situations where this doesn’t happen
-  - Prediction bridge function
-      - Convert `forge()`d predictors to implementation ready type
-        (matrix)
-      - Switch on the `type` and dispatch to the prediction
-        implementation function
-          - Ensure the implementation function called `spruce_()`
-      - Call `validate_prediction_size()` at some point
+Stage 13 - Extra methods - Very much time permitting - `coef()` is easy
+- `fitted()` is easy - `data` argument as opposed to holding onto the
+fitted values - `stats::predict(type = "prob")` to get the fitted values
+- `residuals()` if time - Required items - fitted values from `fitted()`
+- preprocessed outcome from `forge()` - Two kinds - Pearson - Deviance -
+TODO read up more about these - Show formulas for the two kinds -
+Disclaimer about the deviance one being a shortcut -
+`usethis::use_package("ellipsis")` - `ellipsis::check_dots_used()`
