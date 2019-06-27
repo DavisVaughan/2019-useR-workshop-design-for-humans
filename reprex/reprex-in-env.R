@@ -1,3 +1,14 @@
+prex <- function() {
+  withr::with_options(
+    new = c(
+      reprex.highlight.hl_style  = "edit-eclipse",
+      reprex.highlight.font      = "Fira Code Regular",
+      reprex.highlight.font_size = 24
+    ),
+    reprex_in_env(venue = "rtf")
+  )
+}
+
 reprex_render_in_env <- function (input, std_out_err = NULL, env) {
   withr::with_options(list(keep.source = TRUE), {
     rmarkdown::render(input, quiet = TRUE, envir = env)

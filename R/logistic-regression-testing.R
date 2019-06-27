@@ -165,3 +165,14 @@ test_with_missing_columns <- select(test, -gre, -gpa)
 forge(test_with_missing_columns, mod_logreg$blueprint)
 
 predict(mod_glm, test_with_missing_columns, type = "response")
+
+
+# Entirely new types
+train <- data.frame(date = Sys.Date() + 1:100, y = 1:100)
+test <- data.frame(date = 1:5)
+
+processed <- mold(y ~ date, train)
+forge(test, processed$blueprint)
+
+terms <- delete.response(terms(model.frame(y ~ date, train)))
+model.matrix(terms, model.frame(terms, test))
