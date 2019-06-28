@@ -11,6 +11,10 @@ Package:
 
 <https://github.com/DavisVaughan/logisticregression>
 
+hardhat:
+
+<https://github.com/tidymodels/hardhat>
+
 RStudio Servers:
 
 *insert url here*
