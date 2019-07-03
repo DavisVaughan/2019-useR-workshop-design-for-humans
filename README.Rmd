@@ -27,4 +27,8 @@ https://github.com/tidymodels/hardhat
 
 RStudio Servers:
 
-_insert url here_
+https://rstd.io/class/design-for-humans
+
+This page:
+
+https://rstd.io/design-for-humans

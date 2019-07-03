@@ -17,4 +17,8 @@ hardhat:
 
 RStudio Servers:
 
-*insert url here*
+<https://rstd.io/class/design-for-humans>
+
+This page:
+
+<https://rstd.io/design-for-humans>
