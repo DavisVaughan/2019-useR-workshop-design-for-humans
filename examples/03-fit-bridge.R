@@ -4,7 +4,7 @@ logistic_regression(Species ~ ., iris)
 
 library(readr)
 library(dplyr)
-admittance_raw <- read_csv("../2019-useR-workshop-design-for-humans/data/admittance-raw.csv")
+admittance_raw <- read_csv("../data/admittance-raw.csv")
 
 admittance <- admittance_raw %>%
   mutate(
