@@ -17,7 +17,9 @@ hardhat:
 
 RStudio Servers:
 
-<https://rstd.io/class/design-for-humans>
+<https://rstd.io/class>
+
+  - Workshop identifier is `design-for-humans`
 
 This page:
 
