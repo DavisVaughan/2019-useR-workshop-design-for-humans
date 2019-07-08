@@ -7,10 +7,6 @@ Gitter:
 
 <https://gitter.im/tidymodels-workshop/design-for-humans>
 
-Package:
-
-<https://github.com/DavisVaughan/logisticregression>
-
 hardhat:
 
 <https://github.com/tidymodels/hardhat>
