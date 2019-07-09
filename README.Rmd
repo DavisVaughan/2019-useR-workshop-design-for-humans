@@ -11,22 +11,26 @@ knitr::opts_chunk$set(
 )
 ```
 
-Important links:
+## GitHub:
 
-Gitter:
+[rstd.io/design-for-humans](https://rstd.io/design-for-humans)
+
+## Gitter:
 
 https://gitter.im/tidymodels-workshop/design-for-humans
 
-hardhat:
+## hardhat:
 
 https://github.com/tidymodels/hardhat
 
-RStudio Servers:
+## RStudio Servers:
 
-https://rstd.io/class
+[rstd.io/class](https://rstd.io/class)
 
-- Workshop identifier is `design-for-humans`
+## Feedback
 
-This page:
+Confused by anything? Have a burning question you didn't get to ask? Did we miss a topic you wanted us to cover? Please leave us feedback by opening an [issue](https://github.com/DavisVaughan/2019-useR-workshop-design-for-humans/issues)! This is very helpful for us so we can improve the workshop over time.
 
-https://rstd.io/design-for-humans
+Feel free to open these issues in real time during class!
+
+
